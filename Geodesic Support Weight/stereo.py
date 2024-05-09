@@ -1,11 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
-from weight import adaptive_weight
+from weight import compute_geodesic_support_weight
 
 
-
-def compute_disparity_map_WTA(Il, Ir, window_size = 31, gamma=10):
+def compute_disparity_map_GWTA(Il, Ir, window_size = 31, gamma=10):
     h = 288
     w = 384
     r = window_size // 2
@@ -19,9 +18,10 @@ def compute_disparity_map_WTA(Il, Ir, window_size = 31, gamma=10):
             window_left = Il[y-r:y+r+1, x-r:x+r+1, :]
             window_right = Ir[y-r:y+r+1, x-r:x+r+1, :]
 
-            weight_mask_left = adaptive_weight(window_left)
+            weight_mask = compute_geodesic_support_weight(window_left, window_size, gamma)
 
-            minimum_SAD = 1e8 
+            #minimum_SAD = np.sum(np.multiply(weight_mask, np.sum(np.abs(window_left - window_right),axis=-1)))  #SAD
+            minimum_SAD = np.sum(np.multiply(weight_mask, np.sqrt(np.sum((window_left - window_right)**2,axis=-1)))) #SSD
 
             disparity = 0
             for d in range(1,max_disparity):
@@ -29,13 +29,8 @@ def compute_disparity_map_WTA(Il, Ir, window_size = 31, gamma=10):
                     break
                 
                 window_right = Ir[y-r:y+r+1, x-r-d:x+r-d+1, :]  # 동일한 상이 오른쪽 이미지에 왼쪽에 존재하기 때문에 X축 (-) 방향으로 탐색 
-                wieght_mask_right = adaptive_weight(window_right)
-                
-                # (w,w,1)
-                weight = np.multiply(weight_mask_left, wieght_mask_right)
-                current_SAD = np.sum(np.multiply(weight, np.sum(np.abs(window_left - window_right), axis=-1))) / np.sum(weight) #SAD
-                
-                
+                #current_SAD = np.sum(np.multiply(weight_mask, np.sum(np.abs(window_left - window_right), axis=-1)))  #SAD
+                current_SAD = np.sum(np.multiply(weight_mask, np.sqrt(np.sum((window_left - window_right)**2,axis=-1))))  #SSD
                 if current_SAD < minimum_SAD:
                     minimum_SAD = current_SAD
                     disparity = d
@@ -45,6 +40,7 @@ def compute_disparity_map_WTA(Il, Ir, window_size = 31, gamma=10):
 
     progress_bar.close()
     return Id
+
 
 
 
