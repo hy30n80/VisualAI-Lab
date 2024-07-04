@@ -68,23 +68,23 @@ def mark_only_lora_as_trainable(model: nn.Module, bias: str = 'none') -> None:
         raise NotImplementedError
 
 
-# def apply_lora_to_model(model, config):
-#     ## my code ##
-#     for name, module in model.named_modules():
-#         hierarchy = name.split('.')
-#         if len(hierarchy) > 1:
-#             parent_module = model
-#             for submodule_name in hierarchy[:-1]:
-#                 parent_module = getattr(parent_module, submodule_name)
+def apply_lora_to_model(model, config):
+    ## my code ##
+    for name, module in model.named_modules():
+        hierarchy = name.split('.')
+        if len(hierarchy) > 1:
+            parent_module = model
+            for submodule_name in hierarchy[:-1]:
+                parent_module = getattr(parent_module, submodule_name)
             
-#             layer_name = hierarchy[-1]
-#             for target_module in config.target_modules:
-#                 if target_module in layer_name:
-#                     original_layer = getattr(parent_module, layer_name)
-#                     if isinstance(original_layer, nn.Linear):
-#                         setattr(parent_module, layer_name, LoRALayer(original_layer, config))
+            layer_name = hierarchy[-1]
+            for target_module in config.target_modules:
+                if target_module in layer_name:
+                    original_layer = getattr(parent_module, layer_name)
+                    if isinstance(original_layer, nn.Linear):
+                        setattr(parent_module, layer_name, LoRALayer(original_layer, config))
     
-#     return model
+    return model
 
 
 

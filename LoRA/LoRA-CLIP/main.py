@@ -5,12 +5,13 @@ from utils import selection_dataset, partition_dataset, CustomDataset
 from torch.optim import lr_scheduler
 import torch
 import torch.nn as nn
-from lora import LoRALayer, print_trainable_parameters, LoRA_Config, mark_only_lora_as_trainable
+from lora import LoRALayer, print_trainable_parameters, LoRA_Config, mark_only_lora_as_trainable, apply_lora_to_model
 from train import train
 from evaluation import evaluate
 import pdb as pdb
 import yaml
 import time
+from transformers import CLIPModel, AutoProcessor, AutoTokenizer
 
 dataset = load_dataset("food101")
 shuffled_dataset, selected_labels = selection_dataset(dataset, 5)
@@ -30,14 +31,22 @@ val_loader = DataLoader(val_dataset, batch_size = 32, shuffle=False)
 test_loader = DataLoader(test_dataset, batch_size = 32, shuffle=False)
 
 
-model = models.resnet18(pretrained=True)
+model_name = "openai/clip-vit-base-patch32"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+preprocessor = AutoProcessor.from_pretrained(model_name)
+model = CLIPModel.from_pretrained(
+    model_name,
+    #load_in_8bit = True,
+    #device_map = 'auto',
+)
 
 print("** Befor Adapting Lora **")
 print_trainable_parameters(model)
 
+pdb.set_trace()
+
 with open('config.yaml') as f:
     cfg = yaml.safe_load(f)
-    model.fc = nn.Linear(model.fc.in_features, 5) 
     lora_config = LoRA_Config(
         r=cfg['lora']['r'], 
         lora_alpha=cfg['lora']['alpha'], 
@@ -45,11 +54,14 @@ with open('config.yaml') as f:
         merge_weights=cfg['lora']['merge_weights'], 
         target_modules=cfg['lora']['target_modules'],
     )
-    model.fc = LoRALayer(original_layer = model.fc, config = lora_config)
+    model = apply_lora_to_model(model, lora_config)
     mark_only_lora_as_trainable(model)
+
     print("** After Adapting Lora **")
     print_trainable_parameters(model)
 
+
+pdb.set_trace()
 
 num_epochs = 20 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
